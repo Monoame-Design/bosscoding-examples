@@ -1,0 +1,72 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <ul>
+            <li v-for="m in messages">
+                <h4>{{m.message}}<span>-- {{m.name}}</span></h4>
+            </li>
+        </ul>
+
+        <div>{{ typing?'有人輸入中...':'' }}</div>
+        <br>
+        <!-- 將 name 與 message 綁定到 data 的 temp 物件內 -->
+        <input v-model="temp.message" placeholder="訊息" @keydown.enter="sendMessage" @keypress="sendTyping" />
+        <input v-model="temp.name" placeholder="你是誰？" />
+        <button @click="sendMessage">送出</button>
+    </div>
+</body>
+
+<script>
+    var vm = new Vue({
+        el: "#app",
+        data: {
+            messages: [],
+            temp: {},
+            socket: null,
+            typing: false
+        },
+        mounted() {
+            this.socket = socket = io("http://localhost:4040")
+
+            // 進入聊天室時，會收到之前的全部訊息，並更新到 messages
+            this.socket.on("allMessage", obj => {
+                console.log('received all messages')
+                console.log(obj)
+                this.messages = obj
+            })
+
+            // 設定接收到新訊息的監聽器
+            this.socket.on("newMessage", obj => {
+                console.log('received new message')
+                this.messages.push(obj)
+            })
+
+            this.socket.on("someoneIsTyping", value => {
+                this.typing = value
+            })
+        },
+        methods: {
+            sendMessage() {
+                console.log('sending new message')
+                this.socket.emit("sendMessage", this.temp)
+                this.temp.message = ""
+            },
+            sendTyping() {
+                this.socket.emit("sendTyping")
+            }
+        }
+    })
+</script>
+
+</html>
